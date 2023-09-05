@@ -6,55 +6,67 @@
  *  tree.
  */
 
-'use strict';
+"use strict";
 
-const startButton = document.getElementById('startButton');
-const callButton = document.getElementById('callButton');
-const hangupButton = document.getElementById('hangupButton');
+const logger = document.getElementById("log");
+function logMain(msg) {
+  logger.innerHTML = `${msg}<br/>` + logger.innerHTML;
+}
+
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
+
+const startButton = document.getElementById("startButton");
+const callButton = document.getElementById("callButton");
+const hangupButton = document.getElementById("hangupButton");
 callButton.disabled = true;
 hangupButton.disabled = true;
-startButton.addEventListener('click', start);
-callButton.addEventListener('click', call);
-hangupButton.addEventListener('click', hangup);
+startButton.addEventListener("click", start);
+callButton.addEventListener("click", call);
+hangupButton.addEventListener("click", hangup);
 
-const smallButton = document.getElementById('size-small');
-smallButton.addEventListener('click', () => {
-  localStream.getVideoTracks()[0].applyConstraints({width: {exact: 180}});
+const smallButton = document.getElementById("size-small");
+smallButton.addEventListener("click", () => {
+  localStream.getVideoTracks()[0].applyConstraints({ width: { exact: 180 } });
 });
-const vgaButton = document.getElementById('size-vga');
-vgaButton.addEventListener('click', () => {
-  localStream.getVideoTracks()[0].applyConstraints({width: {exact: 640}});
+const vgaButton = document.getElementById("size-vga");
+vgaButton.addEventListener("click", () => {
+  localStream.getVideoTracks()[0].applyConstraints({ width: { exact: 640 } });
 });
-const hdButton = document.getElementById('size-hd');
-hdButton.addEventListener('click', () => {
-  localStream.getVideoTracks()[0].applyConstraints({width: {exact: 1024}});
+const hdButton = document.getElementById("size-hd");
+hdButton.addEventListener("click", () => {
+  localStream.getVideoTracks()[0].applyConstraints({ width: { exact: 1024 } });
 });
 
+const banner = document.querySelector("#banner");
 
-const banner = document.querySelector('#banner');
-
-
+/*
 const supportsInsertableStreams =
       !!RTCRtpSender.prototype.createEncodedStreams;
+*/
 
-if (!supportsInsertableStreams) {
-  banner.innerText = 'Your browser does not support Insertable Streams. ' +
-  'This sample will not work.';
+const supportsEncodedTransforms =
+  window.RTCRtpSender && "transform" in RTCRtpSender.prototype;
+
+if (!supportsEncodedTransforms) {
+  banner.innerText =
+    "Your browser does not support Insertable Streams. " +
+    "This sample will not work.";
   startButton.disabled = true;
 }
 
 let startTime;
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
 
-localVideo.addEventListener('loadedmetadata', function() {
-  console.log(`Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`);
+localVideo.addEventListener("loadedmetadata", function () {
+  console.log(
+    `Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
+  );
 });
 
-remoteVideo.addEventListener('loadedmetadata', function() {
+remoteVideo.addEventListener("loadedmetadata", function () {
   if (startTime) {
     const elapsedTime = window.performance.now() - startTime;
-    console.log('Setup time: ' + elapsedTime.toFixed(3) + 'ms');
+    console.log("Setup time: " + elapsedTime.toFixed(3) + "ms");
     startTime = null;
   }
 });
@@ -64,23 +76,28 @@ let pc1;
 let pc2;
 const offerOptions = {
   offerToReceiveAudio: 0,
-  offerToReceiveVideo: 1
+  offerToReceiveVideo: 1,
 };
 
 function getName(pc) {
-  return (pc === pc1) ? 'pc1' : 'pc2';
+  return pc === pc1 ? "pc1" : "pc2";
 }
 
 function getOtherPc(pc) {
-  return (pc === pc1) ? pc2 : pc1;
+  return pc === pc1 ? pc2 : pc1;
 }
 
 async function start() {
-  console.log('Requesting local stream');
+  console.log("Requesting local stream");
   startButton.disabled = true;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({video: true});
-    console.log('Received local stream');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    //const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    //const [track] = stream.getTracks();
+    //const videoSender = peerConnection.addTrack(track, stream);
+
+    console.log("Received local stream");
     localVideo.srcObject = stream;
     localStream = stream;
     callButton.disabled = false;
@@ -88,6 +105,7 @@ async function start() {
     vgaButton.disabled = false;
     hdButton.disabled = false;
   } catch (e) {
+    console.log(e);
     alert(`getUserMedia() error: ${e.name}`);
   }
 }
@@ -95,29 +113,65 @@ async function start() {
 async function call() {
   callButton.disabled = true;
   hangupButton.disabled = false;
-  console.log('Starting call');
+  console.log("Starting call");
   startTime = window.performance.now();
   const videoTracks = localStream.getVideoTracks();
   if (videoTracks.length > 0) {
     console.log(`Using video device: ${videoTracks[0].label}`);
   }
   pc1 = new RTCPeerConnection();
-  console.log('Created local peer connection object pc1');
-  pc1.addEventListener('icecandidate', e => onIceCandidate(pc1, e));
+  console.log("Created local peer connection object pc1");
+  pc1.addEventListener("icecandidate", (e) => onIceCandidate(pc1, e));
   pc2 = new RTCPeerConnection({
     encodedInsertableStreams: true,
   });
-  console.log('Created remote peer connection object pc2');
-  pc2.addEventListener('icecandidate', e => onIceCandidate(pc2, e));
-  pc1.addEventListener('iceconnectionstatechange', e => onIceStateChange(pc1, e));
-  pc2.addEventListener('iceconnectionstatechange', e => onIceStateChange(pc2, e));
-  pc2.addEventListener('track', gotRemoteTrack);
+  console.log("Created remote peer connection object pc2");
+  pc2.addEventListener("icecandidate", (e) => onIceCandidate(pc2, e));
+  pc1.addEventListener("iceconnectionstatechange", (e) =>
+    onIceStateChange(pc1, e)
+  );
+  pc2.addEventListener("iceconnectionstatechange", (e) =>
+    onIceStateChange(pc2, e)
+  );
+  pc2.addEventListener("track", gotRemoteTrack);
 
-  localStream.getTracks().forEach(track => pc1.addTrack(track, localStream));
-  console.log('Added local stream to pc1');
+  const worker = new Worker("js/worker.js");
+
+  worker.onmessage = function (e) {
+    console.log(`Message received from worker: ${e.data}`);
+    logMain(e.data);
+    try {
+      logMain(`frameid: ${e.data.frameId}`);
+      logMain(`dependencies: ${e.data.dependencies}`);
+      logMain(`width: ${e.data.frameId}`);
+      logMain(`frameid: ${e.data.width}`);
+      logMain(`height: ${e.data.height}`);
+      logMain(`spatialIndex: ${e.data.spatialIndex}`);
+
+      logMain(`temporalIndex: ${e.data.temporalIndex}`);
+
+      logMain(`synchronizationSource: ${e.data.synchronizationSource}`);
+
+      logMain(`payloadType: ${e.data.payloadType}`);
+
+      logMain(`contributingSources: ${e.data.contributingSources}`);
+      logMain(`timestamp: ${e.data.timestamp}`);
+    } catch (e) {}
+  };
+  window.beerthingy = worker;
+
+  worker.postMessage("POsted a MessAge");
+
+  localStream.getTracks().forEach((track) => {
+    const videoSender = pc1.addTrack(track, localStream);
+    videoSender.transform = new RTCRtpScriptTransform(worker, {
+      name: "senderTransform",
+    });
+  });
+  console.log("Added local stream to pc1");
 
   try {
-    console.log('pc1 createOffer start');
+    console.log("pc1 createOffer start");
     const offer = await pc1.createOffer(offerOptions);
     await onCreateOfferSuccess(offer);
   } catch (e) {
@@ -131,7 +185,7 @@ function onCreateSessionDescriptionError(error) {
 
 async function onCreateOfferSuccess(desc) {
   console.log(`Offer from pc1\n${desc.sdp}`);
-  console.log('pc1 setLocalDescription start');
+  console.log("pc1 setLocalDescription start");
   try {
     await pc1.setLocalDescription(desc);
     onSetLocalSuccess(pc1);
@@ -139,15 +193,18 @@ async function onCreateOfferSuccess(desc) {
     onSetSessionDescriptionError();
   }
 
-  console.log('pc2 setRemoteDescription start');
+  console.log("pc2 setRemoteDescription start");
   try {
-    await pc2.setRemoteDescription({type: 'offer', sdp: desc.sdp.replace('red/90000', 'green/90000')});
+    await pc2.setRemoteDescription({
+      type: "offer",
+      sdp: desc.sdp.replace("red/90000", "green/90000"),
+    });
     onSetRemoteSuccess(pc2);
   } catch (e) {
     onSetSessionDescriptionError();
   }
 
-  console.log('pc2 createAnswer start');
+  console.log("pc2 createAnswer start");
   try {
     const answer = await pc2.createAnswer();
     await onCreateAnswerSuccess(answer);
@@ -168,26 +225,37 @@ function onSetSessionDescriptionError(error) {
   console.log(`Failed to set session description: ${error.toString()}`);
 }
 
-function gotRemoteTrack(e) {
-  console.log('pc2 received remote stream');
-  const frameStreams = e.receiver.createEncodedStreams();
-  frameStreams.readable.pipeThrough(new TransformStream({
-    transform: videoAnalyzer
-  }))
-      .pipeTo(frameStreams.writable);
-  remoteVideo.srcObject = e.streams[0];
+function gotRemoteTrack(event) {
+  console.log("pc2 received remote stream");
+  /*
+  const worker1 = new Worker("js/worker.js");
+  event.receiver.transform = new RTCRtpScriptTransform(worker1, {
+    name: "receiverTransform",
+  });
+  */
+
+  //const frameStreams = e.receiver.createEncodedStreams();
+  //frameStreams.readable
+  //  .pipeThrough(
+  //    new TransformStream({
+  //      transform: videoAnalyzer,
+  //    })
+  //  )
+  //  .pipeTo(frameStreams.writable);
+
+  remoteVideo.srcObject = event.streams[0];
 }
 
 async function onCreateAnswerSuccess(desc) {
   console.log(`Answer from pc2:\n${desc.sdp}`);
-  console.log('pc2 setLocalDescription start');
+  console.log("pc2 setLocalDescription start");
   try {
     await pc2.setLocalDescription(desc);
     onSetLocalSuccess(pc2);
   } catch (e) {
     onSetSessionDescriptionError(e);
   }
-  console.log('pc1 setRemoteDescription start');
+  console.log("pc1 setRemoteDescription start");
   try {
     await pc1.setRemoteDescription(desc);
     onSetRemoteSuccess(pc1);
@@ -198,12 +266,16 @@ async function onCreateAnswerSuccess(desc) {
 
 async function onIceCandidate(pc, event) {
   try {
-    await (getOtherPc(pc).addIceCandidate(event.candidate));
+    await getOtherPc(pc).addIceCandidate(event.candidate);
     onAddIceCandidateSuccess(pc);
   } catch (e) {
     onAddIceCandidateError(pc, e);
   }
-  console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
+  console.log(
+    `${getName(pc)} ICE candidate:\n${
+      event.candidate ? event.candidate.candidate : "(null)"
+    }`
+  );
 }
 
 function onAddIceCandidateSuccess(pc) {
@@ -211,18 +283,22 @@ function onAddIceCandidateSuccess(pc) {
 }
 
 function onAddIceCandidateError(pc, error) {
-  console.log(`${getName(pc)} failed to add ICE Candidate: ${error.toString()}`);
+  console.log(
+    `${getName(pc)} failed to add ICE Candidate: ${error.toString()}`
+  );
 }
 
 function onIceStateChange(pc, event) {
   if (pc) {
     console.log(`${getName(pc)} ICE state: ${pc.iceConnectionState}`);
-    console.log('ICE state change event: ', event);
+    console.log("ICE state change event: ", event);
   }
 }
 
 function hangup() {
-  console.log('Ending call');
+  console.log("Ending call");
+  //window.beerthingy.postMessage("POsted a MessAge2");
+
   pc1.close();
   pc2.close();
   pc1 = null;
@@ -231,12 +307,12 @@ function hangup() {
   callButton.disabled = false;
 }
 
-const keyFrameCountDisplay = document.querySelector('#keyframe-count');
-const keyFrameSizeDisplay = document.querySelector('#keyframe-size');
-const interFrameCountDisplay = document.querySelector('#interframe-count');
-const interFrameSizeDisplay = document.querySelector('#interframe-size');
-const videoSizeDisplay = document.querySelector('#video-size');
-const duplicateCountDisplay = document.querySelector('#duplicate-count');
+const keyFrameCountDisplay = document.querySelector("#keyframe-count");
+const keyFrameSizeDisplay = document.querySelector("#keyframe-size");
+const interFrameCountDisplay = document.querySelector("#interframe-count");
+const interFrameSizeDisplay = document.querySelector("#interframe-size");
+const videoSizeDisplay = document.querySelector("#video-size");
+const duplicateCountDisplay = document.querySelector("#duplicate-count");
 let keyFrameCount = 0;
 let interFrameCount = 0;
 let keyFrameLastSize = 0;
@@ -261,9 +337,11 @@ function videoAnalyzer(encodedFrame, controller) {
     interFrameCount++;
     interFrameLastSize = encodedFrame.data.byteLength;
   }
-  if (encodedFrame.type === prevFrameType &&
-      encodedFrame.timestamp === prevFrameTimestamp &&
-      encodedFrame.synchronizationSource === prevFrameSynchronizationSource) {
+  if (
+    encodedFrame.type === prevFrameType &&
+    encodedFrame.timestamp === prevFrameTimestamp &&
+    encodedFrame.synchronizationSource === prevFrameSynchronizationSource
+  ) {
     duplicateCount++;
   }
   prevFrameType = encodedFrame.type;
@@ -281,8 +359,10 @@ setInterval(() => {
   duplicateCountDisplay.innerText = duplicateCount;
 }, 500);
 
-remoteVideo.addEventListener('resize', () => {
-  console.log(`Remote video size changed to ${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`);
+remoteVideo.addEventListener("resize", () => {
+  console.log(
+    `Remote video size changed to ${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`
+  );
   // We'll use the first onsize callback as an indication that video has started
   // playing out.
   videoSizeDisplay.innerText = `${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`;

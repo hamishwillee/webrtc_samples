@@ -1,0 +1,2 @@
+# Custom MIME types
+.js text/javascript
